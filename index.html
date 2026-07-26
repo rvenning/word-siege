@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Word Siege 🏰 — Guess the Word, Save the Castle</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2b2340">
+<meta name="description" content="Hangman with a castle instead of a gallows: guess the word before the catapults bring your walls down.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Word Siege">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lib/gk-base.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+</head>
+<body>
+
+<!-- Splash -->
+<div class="screen active" id="screen-splash">
+  <div class="splash-inner">
+    <div class="splash-castle" aria-hidden="true">🏰</div>
+    <h1 class="logo">WORD<span>SIEGE</span></h1>
+    <p class="tagline">Guess the word before the catapults bring your walls down.</p>
+    <button class="btn big" id="btn-continue-as" style="display:none"></button>
+    <button class="btn big" id="btn-start" onclick="App.play()">⚔️ Defend the Castle</button>
+    <button class="btn ghost" id="btn-install" style="display:none">📲 Add to Home Screen</button>
+    <div class="splash-foot">
+      <span id="sync-badge">…</span>
+      <button class="btn-sound icon-btn">🔊</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile picker (roster + PIN modals rendered by GK.Profiles) -->
+<div class="screen" id="screen-profiles">
+  <header class="bar">
+    <button class="icon-btn" onclick="App.showScreen('splash')">←</button>
+    <h2>Who's defending?</h2>
+    <button class="btn-sound icon-btn">🔊</button>
+  </header>
+  <div class="profile-list" id="profile-list"></div>
+</div>
+
+<!-- Campaign map -->
+<div class="screen" id="screen-map">
+  <header class="bar">
+    <button class="icon-btn" onclick="App.play()">👥</button>
+    <div class="map-player" id="map-player"></div>
+    <button class="icon-btn" onclick="App.showLeaderboard()">🏆</button>
+  </header>
+  <button class="btn big continue" id="btn-continue"></button>
+  <div class="map-actions">
+    <button class="btn blue" onclick="App.showArmoury()">🛡️ Armoury</button>
+    <button class="btn blue" id="btn-endless" onclick="App.startEndless()">♾️ Endless Siege</button>
+    <button class="btn blue" onclick="App.showHelp()">❓ How to Play</button>
+  </div>
+  <div class="level-list" id="level-list"></div>
+</div>
+
+<!-- Armoury (upgrade shop) -->
+<div class="screen" id="screen-armoury">
+  <header class="bar">
+    <button class="icon-btn" onclick="App.showMap()">←</button>
+    <h2>🛡️ Armoury</h2>
+    <span class="hud coins">🪙 <b id="shop-coins">0</b></span>
+  </header>
+  <p class="screen-hint">Spend the coins you win defending sieges. Everything you buy is yours for good.</p>
+  <div class="shop-list" id="shop-list"></div>
+</div>
+
+<!-- Leaderboard -->
+<div class="screen" id="screen-leaderboard">
+  <header class="bar">
+    <button class="icon-btn" onclick="App.showMap()">←</button>
+    <h2>🏆 Family Leaderboard</h2>
+    <button class="btn-sound icon-btn">🔊</button>
+  </header>
+  <div class="lb-rows" id="lb-rows"></div>
+</div>
+
+<!-- The siege -->
+<div class="screen" id="screen-game">
+  <header class="bar game-bar">
+    <button class="icon-btn" onclick="App.pause()">⏸</button>
+    <span class="hud" id="hud-level"></span>
+    <span class="hud" id="hud-word"></span>
+    <span class="hud coins">🪙 <b id="hud-coins">0</b></span>
+    <span class="hud" id="hud-score">0</span>
+  </header>
+
+  <div class="siege-stage"><canvas id="cv"></canvas></div>
+
+  <div class="wall-row">
+    <span class="wall-label">🧱 Wall</span>
+    <div class="wall-blocks" id="wall-blocks"></div>
+  </div>
+
+  <div class="word-area">
+    <div class="word-cat" id="word-cat"></div>
+    <div class="word-slots" id="word-slots"></div>
+    <div class="word-clue" id="word-clue"></div>
+  </div>
+
+  <div class="hint-row">
+    <button class="btn small blue" id="btn-clue" onclick="App.buyClue()">📜 Clue</button>
+    <button class="btn small blue" id="btn-reveal" onclick="App.buyReveal()">🔍 Reveal a letter</button>
+  </div>
+
+  <div class="keyboard" id="keyboard"></div>
+  <p class="keys-hint">Tip: you can use your keyboard too.</p>
+</div>
+
+<!-- Results -->
+<div class="screen" id="screen-results">
+  <div class="res-inner">
+    <div class="res-emoji" id="res-emoji">🎉</div>
+    <h2 class="res-title" id="res-title"></h2>
+    <div class="res-stars" id="res-stars"></div>
+    <div class="res-answer" id="res-answer" style="display:none"></div>
+    <div class="res-score" id="res-score"></div>
+    <div class="res-stats">
+      <div id="res-words"></div>
+      <div id="res-coins"></div>
+      <div id="res-streak"></div>
+    </div>
+    <p class="res-finished" id="res-finished" style="display:none">👑 Every realm defended. The kingdom is yours — try Endless Siege for a score to beat.</p>
+    <div class="res-actions">
+      <button class="btn ghost" onclick="App.showMap()">🗺️ Map</button>
+      <button class="btn" id="res-retry" style="display:none"></button>
+      <button class="btn" id="res-next" style="display:none"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div class="modal" id="modal-pause">
+  <div class="modal-box">
+    <h3>⏸ Paused</h3>
+    <button class="btn green wide" onclick="GK.UI.closeModal('modal-pause')">▶️ Keep Defending</button>
+    <button class="btn blue wide" onclick="App.showHelp()">❓ How to Play</button>
+    <div class="modal-actions">
+      <button class="btn-sound icon-btn">🔊</button>
+    </div>
+    <button class="btn grey wide" onclick="App.quit()">🗺️ Give up and go back</button>
+  </div>
+</div>
+
+<!-- How to play -->
+<div class="modal" id="modal-help">
+  <div class="modal-box">
+    <h3>❓ How to Play</h3>
+    <ol class="help-steps">
+      <li>A word is hidden behind the blanks. The banner tells you what it's about.</li>
+      <li><b>Tap a letter.</b> If it's in the word it fills in — every copy of it at once.</li>
+      <li>If it isn't, the enemy catapult fires and your <b>wall loses a block</b>.</li>
+      <li>Guess the whole word and the masons <b>rebuild part of the wall</b>, then the next word arrives.</li>
+      <li>The wall has to last the <b>whole siege</b>, not just one word. Lose every block and the castle falls.</li>
+      <li>Stuck? Buy a <b>clue</b> or have a <b>letter revealed</b> with the coins you've won.</li>
+    </ol>
+    <button class="btn green wide" onclick="GK.UI.closeModal('modal-help')">Got it!</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<canvas id="confetti"></canvas>
+
+<!-- gamekit (vendored from rvenning/gamekit into lib/) -->
+<script src="lib/gk-util.js"></script>
+<script src="lib/gk-audio.js"></script>
+<script src="lib/gk-ui.js"></script>
+<script src="lib/gk-storage.js"></script>
+<script src="lib/gk-profiles.js"></script>
+<script src="lib/gk-pwa.js"></script>
+<script src="lib/gk-fx.js"></script>
+<script src="lib/gk-debug.js"></script>
+<script>
+  // Dust and stone chips, not fireworks — the juice stays close to the castle.
+  const Fx = GK.Fx.configure({
+    grav: 320, poolCap: 380, shakeMax: 10, shakeDecay: 26, shape: "square",
+    burstSpeed: 140, burstSize: 2.4, textSize: 13, textDy: -28, textCap: 18,
+    font: "'Baloo 2',sans-serif",
+  });
+</script>
+<script src="js/firebase-config.js"></script>
+<!-- data registries -->
+<script src="js/words.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/upgrades.js"></script>
+<!-- systems -->
+<script src="js/game.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

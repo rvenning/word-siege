@@ -1,0 +1,9 @@
+{
+  "name": "word-siege",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hangman with a castle instead of a gallows, for the family games shelf. Built on gamekit.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
